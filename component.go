@@ -17,10 +17,11 @@ import (
 
 // Component - base component
 type Component struct {
-	kind string
-	uuid string
-	nc   *nats.Conn
-	mu   *sync.Mutex
+	kind        string
+	uuid        string
+	nc          *nats.Conn
+	mu          *sync.Mutex
+	systemTopic string
 }
 
 // NewComponent - creates new component
@@ -35,6 +36,7 @@ func NewComponent(kind string) *Component {
 // SetupConnectionToNATS - creates connection
 func (c *Component) SetupConnectionToNATS(servers, systemTopic string, options ...nats.Option) (err error) {
 	options = append(options, nats.Name(c.Name()))
+	c.systemTopic = systemTopic
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.nc, err = nats.Connect(servers, options...)
@@ -43,7 +45,7 @@ func (c *Component) SetupConnectionToNATS(servers, systemTopic string, options .
 	}
 
 	c.setNATSEventHandlers()
-	c.discovery(systemTopic)
+	c.discovery()
 
 	return
 }
@@ -68,9 +70,9 @@ func (c *Component) setNATSEventHandlers() {
 }
 
 // subsribe to main topics for component diagnostics
-func (c *Component) discovery(systemTopic string) (err error) {
+func (c *Component) discovery() (err error) {
 	// send component UUID
-	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.discovery", systemTopic), func(m *nats.Msg) {
+	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.discovery", c.systemTopic), func(m *nats.Msg) {
 		if m.Reply != "" {
 			log.Println("Component ID: " + c.ID() + ". Discovery with reply")
 			c.nc.Publish(m.Reply, []byte(c.ID()))
@@ -79,7 +81,7 @@ func (c *Component) discovery(systemTopic string) (err error) {
 		}
 	})
 	// send component diagnostic info
-	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.%s.status", systemTopic, c.uuid), func(m *nats.Msg) {
+	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.%s.status", c.systemTopic, c.uuid), func(m *nats.Msg) {
 		if m.Reply != "" {
 			log.Println("[Status] Replying with status...")
 			statsz := Stats{
@@ -136,6 +138,13 @@ func (c *Component) ID() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.uuid
+}
+
+// SystemTopic - system topic
+func (c *Component) SystemTopic() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.systemTopic
 }
 
 // Shutdown - close nats connection
