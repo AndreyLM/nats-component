@@ -1,4 +1,4 @@
-module github.com/andreylm/nats-component.git
+module github.com/andreylm/nats-component
 
 go 1.12
 
