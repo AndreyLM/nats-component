@@ -29,9 +29,10 @@ type Component struct {
 // NewComponent - creates new component
 func NewComponent(kind string) *Component {
 	return &Component{
-		kind: kind,
-		uuid: nuid.Next(),
-		mu:   &sync.Mutex{},
+		kind:    kind,
+		uuid:    nuid.Next(),
+		mu:      &sync.Mutex{},
+		started: time.Now(),
 	}
 }
 
