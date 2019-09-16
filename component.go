@@ -7,6 +7,7 @@ import (
 	"log"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/mackerelio/go-osstat/cpu"
 	"github.com/mackerelio/go-osstat/memory"
@@ -22,6 +23,7 @@ type Component struct {
 	nc          *nats.Conn
 	mu          *sync.Mutex
 	systemTopic string
+	started     time.Time
 }
 
 // NewComponent - creates new component
@@ -71,12 +73,25 @@ func (c *Component) setNATSEventHandlers() {
 
 // subsribe to main topics for component diagnostics
 func (c *Component) discovery() (err error) {
-	// send component UUID
+	if err = c.discoveryInfo(); err != nil {
+		log.Println(err)
+	}
+
+	if err = c.discoveryStatus(); err != nil {
+		log.Println(err)
+	}
+
+	return
+}
+
+// dicsoveryInfo - subscribes to discovery topic and reply with main component info
+func (c *Component) discoveryInfo() (err error) {
 	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.discovery", c.systemTopic), func(m *nats.Msg) {
 		if m.Reply != "" {
 			response := Info{
-				ID:   c.ID(),
-				Kind: c.kind,
+				ID:      c.ID(),
+				Kind:    c.kind,
+				Started: c.Started(),
 			}
 			jsonResponse, err := json.Marshal(response)
 			if err != nil {
@@ -86,10 +101,14 @@ func (c *Component) discovery() (err error) {
 			c.nc.Publish(m.Reply, jsonResponse)
 		}
 	})
-	// send component diagnostic info
+
+	return
+}
+
+// discoveryStatus - send to NATS server component stats
+func (c *Component) discoveryStatus() (err error) {
 	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.%s.status", c.systemTopic, c.uuid), func(m *nats.Msg) {
 		if m.Reply != "" {
-			log.Println("[Status] Replying with status...")
 			statsz := Stats{
 				Kind:     c.kind,
 				ID:       c.uuid,
@@ -113,12 +132,9 @@ func (c *Component) discovery() (err error) {
 
 			result, err := json.Marshal(statsz)
 			if err != nil {
-				log.Printf("Error: %s\n", err)
 				return
 			}
 			c.nc.Publish(m.Reply, result)
-		} else {
-			log.Println("[Status] No Reply inbox, skipping...")
 		}
 	})
 
@@ -151,6 +167,13 @@ func (c *Component) SystemTopic() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.systemTopic
+}
+
+// Started - time when component connects to NATS server
+func (c *Component) Started() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.started
 }
 
 // Shutdown - close nats connection

@@ -1,6 +1,9 @@
 package component
 
-import "runtime"
+import (
+	"runtime"
+	"time"
+)
 
 // Stats - component stats
 type Stats struct {
@@ -23,6 +26,7 @@ type SystemStats struct {
 
 // Info - main component info
 type Info struct {
-	ID   string `json:"id"`
-	Kind string `json:"kind"`
+	ID      string    `json:"id"`
+	Kind    string    `json:"kind"`
+	Started time.Time `json:"time"`
 }
