@@ -96,7 +96,6 @@ func (c *Component) discoveryInfo() (err error) {
 			}
 			jsonResponse, err := json.Marshal(response)
 			if err != nil {
-				log.Println(err)
 				return
 			}
 			c.nc.Publish(m.Reply, jsonResponse)
@@ -133,8 +132,10 @@ func (c *Component) discoveryStatus() (err error) {
 
 			result, err := json.Marshal(statsz)
 			if err != nil {
+				log.Println(err)
 				return
 			}
+			log.Println(result)
 			c.nc.Publish(m.Reply, result)
 		}
 	})
