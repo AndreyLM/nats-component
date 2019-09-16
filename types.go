@@ -20,3 +20,9 @@ type SystemStats struct {
 	CPUSystem   uint64 `json:"cpu_system"`
 	CPUCount    int    `json:"cpu_count"`
 }
+
+// Info - main component info
+type Info struct {
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+}

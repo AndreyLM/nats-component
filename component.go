@@ -74,10 +74,16 @@ func (c *Component) discovery() (err error) {
 	// send component UUID
 	_, err = c.nc.Subscribe(fmt.Sprintf("_%s.discovery", c.systemTopic), func(m *nats.Msg) {
 		if m.Reply != "" {
-			log.Println("Component ID: " + c.ID() + ". Discovery with reply")
-			c.nc.Publish(m.Reply, []byte(c.ID()))
-		} else {
-			log.Println("[Discovery] No Reply inbox, skipping...")
+			response := Info{
+				ID:   c.ID(),
+				Kind: c.kind,
+			}
+			jsonResponse, err := json.Marshal(response)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			c.nc.Publish(m.Reply, jsonResponse)
 		}
 	})
 	// send component diagnostic info
