@@ -135,7 +135,6 @@ func (c *Component) discoveryStatus() (err error) {
 				log.Println(err)
 				return
 			}
-			log.Println(statsz)
 			c.nc.Publish(m.Reply, result)
 		}
 	})
